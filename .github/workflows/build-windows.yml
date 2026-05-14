@@ -1,0 +1,48 @@
+# Build .exe (PyInstaller) trên Windows.
+# - Push main/master hoặc workflow_dispatch → tab Actions → Artifacts → windows-exe.
+# - Push tag v* (vd: v1.0.0) → tạo GitHub Release và đính kèm file .exe.
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [main, master]
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  pyinstaller:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build with PyInstaller
+        run: pyinstaller build_windows.spec
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-exe
+          path: dist/AI-Youtube-Shorts-Generator.exe
+          if-no-files-found: error
+
+      - name: Tạo Release (chỉ khi push tag v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/AI-Youtube-Shorts-Generator.exe
+          generate_release_notes: true
+          body: |
+            Bản build Windows (PyInstaller). Cài [FFmpeg](https://ffmpeg.org/download.html) và thêm vào PATH. Đặt thư mục `assets` cạnh file exe nếu cần.
