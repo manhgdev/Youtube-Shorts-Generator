@@ -1,11 +1,12 @@
 # Build .exe (PyInstaller) trên Windows.
 #
-# Bản exe:
-#   • Push main/master hoặc workflow_dispatch → tab Actions → Artifacts → windows-exe
+# Bản exe (Artifact): mọi lần push main/master, tag, hoặc workflow_dispatch.
 #
-# Mục Releases (trang repo /releases):
-#   • Cách 1 — push tag:  git tag v1.0.0 && git push origin v1.0.0
-#   • Cách 2 — chạy tay: Actions → Build Windows EXE → Run workflow → điền "release_tag" (vd v1.0.0)
+# Trang Releases (/releases):
+#   • Push nhánh main/master + có file VERSION (vd 1.0.1) → tạo/cập nhật tag v1.0.1 + đính exe.
+#     Muốn lên 1.0.2: sửa VERSION trong repo, commit, push main → workflow ghi đè Release cùng tag (assets mới).
+#   • Push tag bất kỳ → Release theo tag đó.
+#   • Run workflow tay + ô release_tag → Release theo tag bạn nhập.
 #
 name: Build Windows EXE
 
@@ -49,6 +50,23 @@ jobs:
           path: dist/AI-Youtube-Shorts-Generator.exe
           if-no-files-found: error
 
+      - id: ver
+        name: Đọc VERSION (chỉ nhánh main/master)
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        shell: pwsh
+        run: |
+          if (-not (Test-Path VERSION)) {
+            "skip=true" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+          $v = ((Get-Content VERSION -Raw) -replace '\s','').Trim()
+          if ($v -notmatch '^\d+\.\d+\.\d+$') {
+            "skip=true" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+          "tag=v$v" >> $env:GITHUB_OUTPUT
+          "skip=false" >> $env:GITHUB_OUTPUT
+
       - name: Tạo GitHub Release (push tag)
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
@@ -68,7 +86,21 @@ jobs:
           body: |
             Bản build Windows (PyInstaller). Cài [FFmpeg](https://ffmpeg.org/download.html) và thêm vào PATH. Đặt thư mục `assets` cạnh file exe nếu cần.
 
-      - name: Gợi ý — tại sao chưa có Releases
+      - name: Tạo/cập nhật Release theo file VERSION (push main/master)
+        if: success() && steps.ver.outputs.skip == 'false' && (github.event_name != 'workflow_dispatch' || inputs.release_tag == '')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          files: dist/AI-Youtube-Shorts-Generator.exe
+          generate_release_notes: true
+          make_latest: "true"
+          body: |
+            Bản build Windows (PyInstaller), phiên bản theo file `VERSION` trong repo (tag `${{ steps.ver.outputs.tag }}`).
+
+            Cài [FFmpeg](https://ffmpeg.org/download.html) và thêm vào PATH. Đặt thư mục `assets` cạnh file exe nếu cần.
+
+      - name: Gợi ý — Releases
         if: success() && github.ref_type == 'branch'
         run: |
-          echo "::notice::Chỉ push code lên main → chỉ có Artifact, KHÔNG tạo Releases. Để có Releases: (1) git tag v1.0.0 && git push origin v1.0.0  HOẶC  (2) Actions → Run workflow → điền release_tag."
+          echo "::notice::Có file VERSION (vd 1.0.1) ở gốc repo → mỗi push main/master sẽ tạo/cập nhật Release tag v+VERSION. Hoặc push tag / Run workflow + release_tag."
