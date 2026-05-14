@@ -13,6 +13,11 @@ DEFAULT_TOPIC_PROMPT = (
     "return ONLY the topic name."
 )
 
+AVATAR_VIDEO_DEFAULT_REL = os.path.join("assets", "avatar", "avatars.mp4")
+AVATAR_IMAGE_DEFAULT_REL = os.path.join(
+    "assets", "avatar", "Gemini_Generated_Image_ww2ko4ww2ko4ww2k.png"
+)
+
 
 def _project_root() -> str:
     return os.path.dirname(os.path.abspath(__file__))
@@ -44,10 +49,10 @@ def default_settings() -> Dict[str, Any]:
         "manual_topic": "",
         "script_extra_instructions": "",
         "video_mode": "short",
-        "avatar_video_path": os.path.join("assets", "avatar", "avatars.mp4"),
-        "avatar_image_path": os.path.join(
-            "assets", "avatar", "Gemini_Generated_Image_ww2ko4ww2ko4ww2k.png"
-        ),
+        "avatar_mode": "default",
+        "avatar_video_path": "",
+        "avatar_image_path": "",
+        "output_dir": os.path.join("assets", "final"),
     }
 
 
@@ -62,6 +67,9 @@ def load_settings() -> Dict[str, Any]:
                 for k in data:
                     if k in user:
                         data[k] = user[k]
+                if "avatar_mode" not in user:
+                    if (str(user.get("avatar_video_path") or "").strip() or str(user.get("avatar_image_path") or "").strip()):
+                        data["avatar_mode"] = "custom"
         except (json.JSONDecodeError, OSError):
             pass
     return data

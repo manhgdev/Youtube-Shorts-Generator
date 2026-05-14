@@ -40,8 +40,8 @@ def ensure_ffmpeg_available() -> None:
     )
 
 
-async def run_pipeline(settings: dict) -> None:
-    """Chạy toàn bộ pipeline với dict cấu hình (từ UI hoặc user_settings.json)."""
+async def run_pipeline(settings: dict) -> str | None:
+    """Chạy toàn bộ pipeline; trả về đường dẫn file video cuối nếu thành công."""
     ensure_working_directory()
     ensure_ffmpeg_available()
     from modules.brain import ContentBrain
@@ -102,8 +102,9 @@ async def run_pipeline(settings: dict) -> None:
     final_scene_paths = composer.render_all_scenes(script, assets_map)
 
     if final_scene_paths:
-        composer.concatenate_with_transitions(final_scene_paths)
+        final_path = composer.concatenate_with_transitions(final_scene_paths)
         clean_cache()
+        return final_path
     else:
         print("❌ Failed to generate any scenes.")
         raise RuntimeError("No scenes rendered.")
@@ -164,7 +165,9 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.cli:
-        asyncio.run(run_pipeline(load_settings()))
+        out = asyncio.run(run_pipeline(load_settings()))
+        if out:
+            print("✅ Video:", out)
     else:
         launch_gui()
 

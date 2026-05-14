@@ -2,6 +2,8 @@ import os
 import random
 import ffmpeg
 
+from settings_store import AVATAR_IMAGE_DEFAULT_REL, AVATAR_VIDEO_DEFAULT_REL
+from modules.bundle_paths import resolve_media_path as _resolve_bundle_media
 from modules.media_probe import media_duration_seconds
 
 _STATIC_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
@@ -21,12 +23,33 @@ def _abs_media_path(rel_or_abs: str) -> str:
 class Composer:
     def __init__(self, settings: dict | None = None):
         self.temp_dir = os.path.join(os.getcwd(), "assets", "temp")
-        self.final_dir = os.path.join(os.getcwd(), "assets", "final")
         s = settings or {}
-        raw_v = (s.get("avatar_video_path") or "").strip()
-        raw_i = (s.get("avatar_image_path") or "").strip()
-        self.avatar_video_path = _abs_media_path(raw_v) if raw_v else None
-        self.avatar_image_path = _abs_media_path(raw_i) if raw_i else None
+        raw_out = (s.get("output_dir") or "").strip()
+        if raw_out:
+            self.final_dir = _abs_media_path(raw_out)
+        else:
+            self.final_dir = os.path.join(os.getcwd(), "assets", "final")
+
+        mode = (s.get("avatar_mode") or "default").strip().lower()
+        if mode not in ("off", "default", "custom"):
+            mode = "default"
+        if mode == "off":
+            self.avatar_video_path = None
+            self.avatar_image_path = None
+        elif mode == "default":
+            pv = _resolve_bundle_media(AVATAR_VIDEO_DEFAULT_REL)
+            pi = _resolve_bundle_media(AVATAR_IMAGE_DEFAULT_REL)
+            self.avatar_video_path = pv if pv and os.path.isfile(pv) else None
+            self.avatar_image_path = pi if pi and os.path.isfile(pi) else None
+        else:
+            raw_v = (s.get("avatar_video_path") or "").strip()
+            raw_i = (s.get("avatar_image_path") or "").strip()
+            self.avatar_video_path = _resolve_bundle_media(raw_v) if raw_v else None
+            self.avatar_image_path = _resolve_bundle_media(raw_i) if raw_i else None
+            if self.avatar_video_path and not os.path.isfile(self.avatar_video_path):
+                self.avatar_video_path = None
+            if self.avatar_image_path and not os.path.isfile(self.avatar_image_path):
+                self.avatar_image_path = None
         
         os.makedirs(self.temp_dir, exist_ok=True)
         os.makedirs(self.final_dir, exist_ok=True)

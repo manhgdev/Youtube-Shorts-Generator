@@ -69,7 +69,7 @@ def run_app() -> None:
     configure_all_ffmpeg_paths()
     root = tk.Tk()
     root.title("AI Youtube Shorts — Cấu hình & Chạy")
-    root.minsize(720, 720)
+    root.minsize(720, 800)
 
     presets = gemini_model_presets()
     defaults = default_settings()
@@ -170,32 +170,89 @@ def run_app() -> None:
     script_extra.grid(row=9, column=1, sticky="ew", **pad)
     script_extra.insert("1.0", loaded.get("script_extra_instructions", ""))
 
-    ttk.Label(frm, text="Video nhân vật (avatar)").grid(row=10, column=0, sticky="w", **pad)
-    avatar_vid_var = tk.StringVar(value=loaded.get("avatar_video_path", defaults["avatar_video_path"]))
+    ttk.Label(frm, text="Thư mục đầu ra (video)").grid(row=10, column=0, sticky="nw", **pad)
+    out_dir_var = tk.StringVar(value=loaded.get("output_dir", defaults["output_dir"]))
+    out_dir_row = ttk.Frame(frm)
+    out_dir_row.grid(row=10, column=1, sticky="ew", **pad)
+    ttk.Entry(out_dir_row, textvariable=out_dir_var, width=56).pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+    def _browse_output_dir() -> None:
+        d = filedialog.askdirectory(title="Chọn thư mục lưu video cuối (final_short.mp4)")
+        if d:
+            out_dir_var.set(d)
+
+    ttk.Button(out_dir_row, text="Chọn…", command=_browse_output_dir).pack(side=tk.LEFT, padx=(6, 0))
+    ttk.Label(
+        frm,
+        text="Tên file luôn là final_short.mp4. Để trống ô rồi Lưu → dùng mặc định assets/final trong project.",
+        font=("TkDefaultFont", 9),
+    ).grid(row=11, column=1, sticky="w", padx=8)
+
+    ttk.Label(frm, text="Avatar trong video").grid(row=12, column=0, sticky="nw", **pad)
+    _am_loaded = (loaded.get("avatar_mode") or defaults["avatar_mode"]).strip().lower()
+    if _am_loaded not in ("off", "default", "custom"):
+        _am_loaded = "default"
+    avatar_mode_var = tk.StringVar(value=_am_loaded)
+    avatar_mode_fr = ttk.Frame(frm)
+    avatar_mode_fr.grid(row=12, column=1, sticky="w", **pad)
+    ttk.Radiobutton(avatar_mode_fr, text="Tắt — không chèn avatar", variable=avatar_mode_var, value="off").pack(
+        anchor="w"
+    )
+    ttk.Radiobutton(
+        avatar_mode_fr,
+        text="Mặc định — avatar đóng gói / assets/avatar (nếu có file khi build)",
+        variable=avatar_mode_var,
+        value="default",
+    ).pack(anchor="w")
+    ttk.Radiobutton(
+        avatar_mode_fr,
+        text="Tùy chỉnh — chọn video / ảnh trên máy bạn",
+        variable=avatar_mode_var,
+        value="custom",
+    ).pack(anchor="w")
+
+    ttk.Label(frm, text="Video avatar (tùy chỉnh)").grid(row=13, column=0, sticky="w", **pad)
+    _av_init_v = (loaded.get("avatar_video_path") or "") if _am_loaded == "custom" else ""
+    _av_init_i = (loaded.get("avatar_image_path") or "") if _am_loaded == "custom" else ""
+    avatar_vid_var = tk.StringVar(value=_av_init_v)
+    avatar_img_var = tk.StringVar(value=_av_init_i)
     av_vid_row = ttk.Frame(frm)
-    av_vid_row.grid(row=10, column=1, sticky="ew", **pad)
-    ttk.Entry(av_vid_row, textvariable=avatar_vid_var, width=56).pack(side=tk.LEFT, fill=tk.X, expand=True)
-    ttk.Button(
+    av_vid_row.grid(row=13, column=1, sticky="ew", **pad)
+    av_vid_entry = ttk.Entry(av_vid_row, textvariable=avatar_vid_var, width=56)
+    av_vid_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+    av_vid_btn = ttk.Button(
         av_vid_row,
         text="Chọn…",
         command=lambda: _browse_video(avatar_vid_var),
-    ).pack(side=tk.LEFT, padx=(6, 0))
+    )
+    av_vid_btn.pack(side=tk.LEFT, padx=(6, 0))
 
-    ttk.Label(frm, text="Ảnh nhân vật (dự phòng)").grid(row=11, column=0, sticky="nw", **pad)
-    avatar_img_var = tk.StringVar(value=loaded.get("avatar_image_path", defaults["avatar_image_path"]))
+    ttk.Label(frm, text="Ảnh avatar (tùy chỉnh, dự phòng)").grid(row=14, column=0, sticky="nw", **pad)
     av_img_row = ttk.Frame(frm)
-    av_img_row.grid(row=11, column=1, sticky="ew", **pad)
-    ttk.Entry(av_img_row, textvariable=avatar_img_var, width=56).pack(side=tk.LEFT, fill=tk.X, expand=True)
-    ttk.Button(
+    av_img_row.grid(row=14, column=1, sticky="ew", **pad)
+    av_img_entry = ttk.Entry(av_img_row, textvariable=avatar_img_var, width=56)
+    av_img_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+    av_img_btn = ttk.Button(
         av_img_row,
         text="Chọn…",
         command=lambda: _browse_image(avatar_img_var),
-    ).pack(side=tk.LEFT, padx=(6, 0))
+    )
+    av_img_btn.pack(side=tk.LEFT, padx=(6, 0))
+
+    def _sync_avatar_custom_widgets(*_) -> None:
+        on = avatar_mode_var.get() == "custom"
+        st = tk.NORMAL if on else tk.DISABLED
+        for w in (av_vid_entry, av_img_entry, av_vid_btn, av_img_btn):
+            w.configure(state=st)
+
+    avatar_mode_var.trace_add("write", _sync_avatar_custom_widgets)
+    _sync_avatar_custom_widgets()
+
     ttk.Label(
         frm,
-        text="Ưu tiên video nếu file tồn tại; nếu không (hoặc để trống ô video) thì dùng ảnh khi file ảnh có mặt.",
+        text='Chế độ "Mặc định": ưu tiên video avatar; không có video thì dùng ảnh. "Tùy chỉnh": đường dẫn dưới đây.',
         font=("TkDefaultFont", 9),
-    ).grid(row=12, column=1, sticky="w", padx=8)
+    ).grid(row=15, column=1, sticky="w", padx=8)
 
     def _browse_video(var: tk.StringVar) -> None:
         p = filedialog.askopenfilename(
@@ -221,8 +278,8 @@ def run_app() -> None:
 
     log_q: queue.Queue[str] = queue.Queue()
     log_box = scrolledtext.ScrolledText(frm, height=12, width=70, wrap=tk.WORD, state=tk.DISABLED)
-    log_box.grid(row=13, column=0, columnspan=2, sticky="nsew", pady=8)
-    frm.rowconfigure(13, weight=1)
+    log_box.grid(row=16, column=0, columnspan=2, sticky="nsew", pady=8)
+    frm.rowconfigure(16, weight=1)
     frm.columnconfigure(1, weight=1)
 
     def _append_log(text: str) -> None:
@@ -243,6 +300,11 @@ def run_app() -> None:
     _drain_log_queue()
 
     def _gather_settings() -> dict:
+        am = avatar_mode_var.get().strip().lower()
+        if am not in ("off", "default", "custom"):
+            am = "default"
+        v_raw = avatar_vid_var.get().strip()
+        i_raw = avatar_img_var.get().strip()
         return {
             "gemini_api_key": gemini_var.get().strip(),
             "pexels_api_key": pexels_var.get().strip(),
@@ -252,8 +314,10 @@ def run_app() -> None:
             "manual_topic": manual_topic_var.get().strip(),
             "script_extra_instructions": script_extra.get("1.0", tk.END).strip(),
             "video_mode": video_mode_var.get().strip().lower(),
-            "avatar_video_path": _normalize_saved_media_path(avatar_vid_var.get()),
-            "avatar_image_path": _normalize_saved_media_path(avatar_img_var.get()),
+            "avatar_mode": am,
+            "avatar_video_path": _normalize_saved_media_path(v_raw) if am == "custom" else "",
+            "avatar_image_path": _normalize_saved_media_path(i_raw) if am == "custom" else "",
+            "output_dir": _normalize_saved_media_path(out_dir_var.get()),
         }
 
     def on_save() -> None:
@@ -280,6 +344,9 @@ def run_app() -> None:
         if data["video_mode"] not in ("short", "long"):
             messagebox.showerror("Độ dài video", "Chọn Ngắn hoặc Dài.")
             return
+        if data["avatar_mode"] not in ("off", "default", "custom"):
+            messagebox.showerror("Avatar", "Chọn một chế độ avatar.")
+            return
         configure_all_ffmpeg_paths()
         ok_ff, ff_msg = ffmpeg_health_message()
         if not ok_ff:
@@ -298,7 +365,7 @@ def run_app() -> None:
             tee_err = _TeeQueue(log_q, old_err)
             try:
                 sys.stdout, sys.stderr = tee_out, tee_err
-                asyncio.run(run_pipeline(data))
+                result["video_path"] = asyncio.run(run_pipeline(data))
                 result["ok"] = True
             except Exception as e:
                 result["err"] = e
@@ -310,14 +377,18 @@ def run_app() -> None:
                 if result.get("err"):
                     messagebox.showerror("Lỗi", str(result["err"]))
                 else:
-                    messagebox.showinfo("Hoàn tất", "Pipeline chạy xong. Video: assets/final/final_short.mp4")
+                    vp = result.get("video_path") or ""
+                    messagebox.showinfo(
+                        "Hoàn tất",
+                        f"Pipeline chạy xong.\n\nVideo:\n{vp}" if vp else "Pipeline chạy xong.",
+                    )
 
             root.after(0, done)
 
         threading.Thread(target=worker, daemon=True).start()
 
     btn_row = ttk.Frame(frm)
-    btn_row.grid(row=14, column=0, columnspan=2, pady=6)
+    btn_row.grid(row=17, column=0, columnspan=2, pady=6)
     ttk.Button(btn_row, text="Lưu cấu hình", command=on_save).pack(side=tk.LEFT, padx=4)
     run_btn = ttk.Button(btn_row, text="Chạy tạo video", command=on_run)
     run_btn.pack(side=tk.LEFT, padx=4)

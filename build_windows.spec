@@ -2,8 +2,8 @@
 #   pip install -r requirements.txt
 #   pyinstaller build_windows.spec
 #
-# Bản exe nằm trong dist/. FFmpeg: đóng gói kèm imageio-ffmpeg (PyInstaller collect_all).
-# Vẫn có thể dùng ffmpeg hệ thống hoặc đặt ffmpeg.exe cạnh exe.
+# Bản exe nằm trong dist/. FFmpeg: imageio-ffmpeg (collect_all).
+# Avatar mặc định: assets/avatar/*.mp4, *.png (nếu có file khi build) → đóng gói vào exe, runtime đọc từ _MEIPASS.
 # Đặt console=True nếu cần cửa sổ console khi gỡ lỗi khởi động GUI.
 
 from pathlib import Path
@@ -15,11 +15,18 @@ root = Path(SPECPATH).resolve()
 
 _iio_datas, _iio_binaries, _iio_hidden = collect_all("imageio_ffmpeg")
 
+_avatar_datas = []
+_avatar_dir = root / "assets" / "avatar"
+for _fname in ("avatars.mp4", "Gemini_Generated_Image_ww2ko4ww2ko4ww2k.png"):
+    _fp = _avatar_dir / _fname
+    if _fp.is_file():
+        _avatar_datas.append((str(_fp), "assets/avatar"))
+
 a = Analysis(
     [str(root / "main.py")],
     pathex=[str(root)],
     binaries=_iio_binaries,
-    datas=_iio_datas,
+    datas=list(_iio_datas) + _avatar_datas,
     hiddenimports=[
         "google.genai",
         "google.genai.types",
@@ -30,6 +37,7 @@ a = Analysis(
         "imageio_ffmpeg",
         "modules.ffmpeg_env",
         "modules.media_probe",
+        "modules.bundle_paths",
         *_iio_hidden,
     ],
     hookspath=[],
