@@ -22,43 +22,22 @@ def ensure_working_directory() -> None:
 
 def ensure_ffmpeg_available() -> None:
     """
-    ffmpeg-python gọi subprocess 'ffmpeg' / 'ffprobe'. Nếu không có trong PATH → Windows báo
-    [WinError 2] The system cannot find the file specified.
-    Thử thêm thư mục cạnh file exe (portable: đặt ffmpeg.exe + ffprobe.exe cùng thư mục app).
+    Cần lệnh ffmpeg (bundle imageio-ffmpeg, thư mục cạnh exe, hoặc PATH).
+    Độ dài clip dùng ffprobe nếu có, không thì parse từ ffmpeg -i (không bắt buộc ffprobe).
     """
-    if shutil.which("ffmpeg") and shutil.which("ffprobe"):
+    from modules.ffmpeg_env import app_binary_directory, configure_all_ffmpeg_paths
+
+    configure_all_ffmpeg_paths()
+    if shutil.which("ffmpeg"):
         return
 
-    app_root = (
-        os.path.dirname(sys.executable)
-        if getattr(sys, "frozen", False)
-        else os.path.dirname(os.path.abspath(__file__))
+    app_root = app_binary_directory()
+    raise RuntimeError(
+        "Không tìm thấy ffmpeg (WinError 2 nếu thiếu file).\n\n"
+        "• Bản build đầy đủ đã gói ffmpeg qua imageio-ffmpeg — build lại exe sau khi cập nhật repo.\n"
+        "• Hoặc cài FFmpeg (winget / trang Gyan), hoặc đặt ffmpeg.exe cạnh file exe:\n"
+        f"  {app_root}"
     )
-    guess_dirs = [
-        app_root,
-        os.path.join(app_root, "bin"),
-        os.path.join(app_root, "ffmpeg", "bin"),
-        os.path.join(app_root, "ffmpeg"),
-    ]
-    path = os.environ.get("PATH", "")
-    prepend = []
-    for d in guess_dirs:
-        if not d or not os.path.isdir(d):
-            continue
-        exe = "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"
-        if os.path.isfile(os.path.join(d, exe)) and d not in prepend:
-            prepend.append(d)
-    if prepend:
-        os.environ["PATH"] = os.pathsep.join(prepend) + (os.pathsep + path if path else "")
-
-    if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
-        raise RuntimeError(
-            "Không tìm thấy FFmpeg (ffmpeg / ffprobe). Trên Windows lỗi thường là WinError 2.\n\n"
-            "Cách xử lý:\n"
-            "• Cài FFmpeg và thêm vào PATH (ví dụ winget install ffmpeg), rồi mở lại ứng dụng; hoặc\n"
-            "• Sao chép ffmpeg.exe và ffprobe.exe vào CÙNG thư mục với file exe của app:\n"
-            f"  {app_root}"
-        )
 
 
 async def run_pipeline(settings: dict) -> None:

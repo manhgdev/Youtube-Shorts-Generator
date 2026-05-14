@@ -2,20 +2,24 @@
 #   pip install -r requirements.txt
 #   pyinstaller build_windows.spec
 #
-# Bản exe nằm trong dist/. FFmpeg không đóng gói sẵn — cài vào PATH, hoặc đặt ffmpeg.exe + ffprobe.exe
-# cùng thư mục với exe (ứng dụng tự thêm thư mục đó vào PATH khi chạy).
+# Bản exe nằm trong dist/. FFmpeg: đóng gói kèm imageio-ffmpeg (PyInstaller collect_all).
+# Vẫn có thể dùng ffmpeg hệ thống hoặc đặt ffmpeg.exe cạnh exe.
 # Đặt console=True nếu cần cửa sổ console khi gỡ lỗi khởi động GUI.
 
 from pathlib import Path
 
+from PyInstaller.utils.hooks import collect_all
+
 block_cipher = None
 root = Path(SPECPATH).resolve()
+
+_iio_datas, _iio_binaries, _iio_hidden = collect_all("imageio_ffmpeg")
 
 a = Analysis(
     [str(root / "main.py")],
     pathex=[str(root)],
-    binaries=[],
-    datas=[],
+    binaries=_iio_binaries,
+    datas=_iio_datas,
     hiddenimports=[
         "google.genai",
         "google.genai.types",
@@ -23,6 +27,10 @@ a = Analysis(
         "certifi",
         "mutagen.mp3",
         "ffmpeg",
+        "imageio_ffmpeg",
+        "modules.ffmpeg_env",
+        "modules.media_probe",
+        *_iio_hidden,
     ],
     hookspath=[],
     hooksconfig={},

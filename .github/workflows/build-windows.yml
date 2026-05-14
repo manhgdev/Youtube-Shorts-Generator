@@ -1,4 +1,5 @@
-# Build .exe (PyInstaller) trên Windows.
+# Build .exe (PyInstaller) trên GitHub (máy ảo Windows).
+# Push code lên main/master (hoặc tag / Run workflow) → tab Actions → job xanh → tải Artifact "windows-exe".
 #
 # Bản exe (Artifact): mọi lần push main/master, tag, hoặc workflow_dispatch.
 #
@@ -36,12 +37,23 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Build with PyInstaller
-        run: pyinstaller build_windows.spec
+        run: pyinstaller --noconfirm build_windows.spec
+
+      - name: Kiểm tra kết quả build
+        shell: pwsh
+        run: |
+          $p = "dist/AI-Youtube-Shorts-Generator.exe"
+          if (-not (Test-Path $p)) { throw "Thiếu file: $p" }
+          Get-Item $p | Select-Object Name, @{N='SizeMB';E={[math]::Round($_.Length/1MB, 2)}}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -74,7 +86,7 @@ jobs:
           files: dist/AI-Youtube-Shorts-Generator.exe
           generate_release_notes: true
           body: |
-            Bản build Windows (PyInstaller). Cài [FFmpeg](https://ffmpeg.org/download.html) và thêm vào PATH. Đặt thư mục `assets` cạnh file exe nếu cần.
+            Bản build Windows (PyInstaller). FFmpeg được đóng gói kèm (imageio-ffmpeg). Đặt thư mục `assets` cạnh file exe nếu cần.
 
       - name: Tạo GitHub Release (chạy tay + có nhập tag)
         if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
@@ -84,7 +96,7 @@ jobs:
           files: dist/AI-Youtube-Shorts-Generator.exe
           generate_release_notes: true
           body: |
-            Bản build Windows (PyInstaller). Cài [FFmpeg](https://ffmpeg.org/download.html) và thêm vào PATH. Đặt thư mục `assets` cạnh file exe nếu cần.
+            Bản build Windows (PyInstaller). FFmpeg đóng gói kèm. Đặt thư mục `assets` cạnh file exe nếu cần.
 
       - name: Tạo/cập nhật Release theo file VERSION (push main/master)
         if: success() && steps.ver.outputs.skip == 'false' && (github.event_name != 'workflow_dispatch' || inputs.release_tag == '')
@@ -98,7 +110,7 @@ jobs:
           body: |
             Bản build Windows (PyInstaller), phiên bản theo file `VERSION` trong repo (tag `${{ steps.ver.outputs.tag }}`).
 
-            Cài [FFmpeg](https://ffmpeg.org/download.html) và thêm vào PATH. Đặt thư mục `assets` cạnh file exe nếu cần.
+            FFmpeg đóng gói kèm. Đặt thư mục `assets` cạnh file exe nếu cần.
 
       - name: Gợi ý — Releases
         if: success() && github.ref_type == 'branch'

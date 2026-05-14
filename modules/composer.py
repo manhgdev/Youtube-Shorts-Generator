@@ -2,6 +2,8 @@ import os
 import random
 import ffmpeg
 
+from modules.media_probe import media_duration_seconds
+
 _STATIC_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
 
 
@@ -39,11 +41,7 @@ class Composer:
         return None
 
     def get_duration(self, filepath):
-        try:
-            probe = ffmpeg.probe(filepath)
-            return float(probe['format']['duration'])
-        except:
-            return 0.0
+        return media_duration_seconds(filepath)
 
     def process_scene(self, scene, video_pair, is_avatar=False):
         """
