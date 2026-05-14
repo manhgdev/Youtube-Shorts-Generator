@@ -1,0 +1,50 @@
+# Build bản chạy macOS (PyInstaller one-file) trên GitHub — máy ảo macos-latest.
+# Actions → Build macOS → Artifact "macos-binary" (zip chứa file AI-Youtube-Shorts-Generator).
+#
+# Lần đầu trên Mac: giải nén → Terminal: chmod +x AI-Youtube-Shorts-Generator → ./AI-Youtube-Shorts-Generator
+# Hoặc Control+Click → Mở (nếu Gatekeeper cảnh báo app chưa ký).
+#
+name: Build macOS
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pyinstaller:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip3 install -r requirements.txt
+
+      - name: Build with PyInstaller
+        run: pyinstaller --noconfirm build_macos.spec
+
+      - name: Kiểm tra kết quả build
+        run: |
+          test -f dist/AI-Youtube-Shorts-Generator
+          chmod +x dist/AI-Youtube-Shorts-Generator
+          ls -la dist/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-binary
+          path: dist/AI-Youtube-Shorts-Generator
+          if-no-files-found: error
