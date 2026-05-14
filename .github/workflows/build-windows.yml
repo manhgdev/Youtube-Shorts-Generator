@@ -1,14 +1,25 @@
 # Build .exe (PyInstaller) trên Windows.
-# - Push main/master hoặc workflow_dispatch → tab Actions → Artifacts → windows-exe.
-# - Push tag v* (vd: v1.0.0) → tạo GitHub Release và đính kèm file .exe.
+#
+# Bản exe:
+#   • Push main/master hoặc workflow_dispatch → tab Actions → Artifacts → windows-exe
+#
+# Mục Releases (trang repo /releases):
+#   • Cách 1 — push tag:  git tag v1.0.0 && git push origin v1.0.0
+#   • Cách 2 — chạy tay: Actions → Build Windows EXE → Run workflow → điền "release_tag" (vd v1.0.0)
+#
 name: Build Windows EXE
 
 on:
   push:
     branches: [main, master]
     tags:
-      - "v*"
+      - "*"
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Tạo GitHub Release với tag này (vd v1.0.0). Để trống = chỉ build + Artifact."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -38,11 +49,26 @@ jobs:
           path: dist/AI-Youtube-Shorts-Generator.exe
           if-no-files-found: error
 
-      - name: Tạo Release (chỉ khi push tag v*)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Tạo GitHub Release (push tag)
+        if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
           files: dist/AI-Youtube-Shorts-Generator.exe
           generate_release_notes: true
           body: |
             Bản build Windows (PyInstaller). Cài [FFmpeg](https://ffmpeg.org/download.html) và thêm vào PATH. Đặt thư mục `assets` cạnh file exe nếu cần.
+
+      - name: Tạo GitHub Release (chạy tay + có nhập tag)
+        if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.release_tag }}
+          files: dist/AI-Youtube-Shorts-Generator.exe
+          generate_release_notes: true
+          body: |
+            Bản build Windows (PyInstaller). Cài [FFmpeg](https://ffmpeg.org/download.html) và thêm vào PATH. Đặt thư mục `assets` cạnh file exe nếu cần.
+
+      - name: Gợi ý — tại sao chưa có Releases
+        if: success() && github.ref_type == 'branch'
+        run: |
+          echo "::notice::Chỉ push code lên main → chỉ có Artifact, KHÔNG tạo Releases. Để có Releases: (1) git tag v1.0.0 && git push origin v1.0.0  HOẶC  (2) Actions → Run workflow → điền release_tag."
