@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import os
+import shutil
 import sys
 
 from settings_store import (
@@ -19,8 +20,51 @@ def ensure_working_directory() -> None:
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 
+def ensure_ffmpeg_available() -> None:
+    """
+    ffmpeg-python gọi subprocess 'ffmpeg' / 'ffprobe'. Nếu không có trong PATH → Windows báo
+    [WinError 2] The system cannot find the file specified.
+    Thử thêm thư mục cạnh file exe (portable: đặt ffmpeg.exe + ffprobe.exe cùng thư mục app).
+    """
+    if shutil.which("ffmpeg") and shutil.which("ffprobe"):
+        return
+
+    app_root = (
+        os.path.dirname(sys.executable)
+        if getattr(sys, "frozen", False)
+        else os.path.dirname(os.path.abspath(__file__))
+    )
+    guess_dirs = [
+        app_root,
+        os.path.join(app_root, "bin"),
+        os.path.join(app_root, "ffmpeg", "bin"),
+        os.path.join(app_root, "ffmpeg"),
+    ]
+    path = os.environ.get("PATH", "")
+    prepend = []
+    for d in guess_dirs:
+        if not d or not os.path.isdir(d):
+            continue
+        exe = "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"
+        if os.path.isfile(os.path.join(d, exe)) and d not in prepend:
+            prepend.append(d)
+    if prepend:
+        os.environ["PATH"] = os.pathsep.join(prepend) + (os.pathsep + path if path else "")
+
+    if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
+        raise RuntimeError(
+            "Không tìm thấy FFmpeg (ffmpeg / ffprobe). Trên Windows lỗi thường là WinError 2.\n\n"
+            "Cách xử lý:\n"
+            "• Cài FFmpeg và thêm vào PATH (ví dụ winget install ffmpeg), rồi mở lại ứng dụng; hoặc\n"
+            "• Sao chép ffmpeg.exe và ffprobe.exe vào CÙNG thư mục với file exe của app:\n"
+            f"  {app_root}"
+        )
+
+
 async def run_pipeline(settings: dict) -> None:
     """Chạy toàn bộ pipeline với dict cấu hình (từ UI hoặc user_settings.json)."""
+    ensure_working_directory()
+    ensure_ffmpeg_available()
     from modules.brain import ContentBrain
     from modules.asset_manager import AssetManager
     from modules.audio import AudioEngine

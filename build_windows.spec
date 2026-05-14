@@ -2,7 +2,8 @@
 #   pip install -r requirements.txt
 #   pyinstaller build_windows.spec
 #
-# Bản exe nằm trong dist/. FFmpeg không được đóng gói — cài FFmpeg và thêm vào PATH trên máy Windows.
+# Bản exe nằm trong dist/. FFmpeg không đóng gói sẵn — cài vào PATH, hoặc đặt ffmpeg.exe + ffprobe.exe
+# cùng thư mục với exe (ứng dụng tự thêm thư mục đó vào PATH khi chạy).
 # Đặt console=True nếu cần cửa sổ console khi gỡ lỗi khởi động GUI.
 
 from pathlib import Path
