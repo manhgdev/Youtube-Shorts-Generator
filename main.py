@@ -44,6 +44,7 @@ async def run_pipeline(settings: dict) -> None:
         model_name=model_name,
         topic_prompt=topic_prompt,
         script_extra_instructions=script_extra,
+        video_mode=(settings.get("video_mode") or "short"),
     )
 
     if settings.get("use_manual_topic") and not (settings.get("manual_topic") or "").strip():

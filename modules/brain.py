@@ -18,6 +18,7 @@ class ContentBrain:
         model_name: str | None = None,
         topic_prompt: str | None = None,
         script_extra_instructions: str = "",
+        video_mode: str | None = None,
     ):
         if not (api_key or "").strip():
             raise ValueError("Gemini API key is required.")
@@ -25,6 +26,8 @@ class ContentBrain:
         self.model_name = (model_name or "").strip() or MODEL_CONFIG["models"][0]["name"]
         self.topic_prompt = (topic_prompt or "").strip()
         self.script_extra_instructions = (script_extra_instructions or "").strip()
+        vm = (video_mode or "").strip().lower()
+        self.video_mode = vm if vm in ("short", "long") else None
 
     def _generate(self, contents, max_retries: int = 4):
         model = self.model_name
@@ -60,7 +63,9 @@ class ContentBrain:
         """
         Generates a structured JSON script with visual cues.
         """
-        mode = VIDEO_CONFIG["mode"]
+        mode = self.video_mode or VIDEO_CONFIG.get("mode") or "short"
+        if mode not in ("short", "long"):
+            mode = "short"
         if mode == "long":
             min_scenes = VIDEO_CONFIG["long_mode"]["min_scenes"]
             max_scenes = VIDEO_CONFIG["long_mode"]["max_scenes"]
@@ -144,6 +149,7 @@ if __name__ == "__main__":
         model_name=effective_gemini_model(s),
         topic_prompt=s.get("topic_prompt") or DEFAULT_TOPIC_PROMPT,
         script_extra_instructions=s.get("script_extra_instructions", ""),
+        video_mode=s.get("video_mode"),
     )
     topic = brain.get_trending_topic()
     script = brain.generate_script(topic)

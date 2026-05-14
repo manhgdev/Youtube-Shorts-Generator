@@ -43,6 +43,7 @@ def default_settings() -> Dict[str, Any]:
         "use_manual_topic": False,
         "manual_topic": "",
         "script_extra_instructions": "",
+        "video_mode": "short",
         "avatar_video_path": os.path.join("assets", "avatar", "avatars.mp4"),
         "avatar_image_path": os.path.join(
             "assets", "avatar", "Gemini_Generated_Image_ww2ko4ww2ko4ww2k.png"

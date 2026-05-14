@@ -1,9 +1,11 @@
 # AI Model Configuration - Ordered by priority (first = preferred)
 MODEL_CONFIG = {
     "models": [
-        {"name": "gemini-3.1-flash-lite", "rpd": 500},    # Best quota
-        {"name": "gemini-2.5-flash", "rpd": 20},           # Good quality
-        {"name": "gemini-2.5-flash-lite", "rpd": 20},     # Lightweight
+        {"name": "gemini-2.5-flash", "rpd": 20},
+        {"name": "gemini-3.1-flash-lite-preview", "rpd": 500},
+        {"name": "gemini-3.1-flash-preview", "rpd": 200},
+        {"name": "gemini-2.5-flash-lite", "rpd": 20},
+        {"name": "gemini-2.0-flash", "rpd": 50},
     ],
     "current_model_index": 0,  # Start with first model
     "retry_delay_seconds": 60,  # Wait time after 429 error
